@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Watersports Sales Vocab – Single-file App</title>
+  <meta name="description" content="Flashcards & Quiz học 200 từ vựng bán hàng dịch vụ thể thao biển" />
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Simple card flip without external libs */
+    .flip {
+      transform-style: preserve-3d;
+      transition: transform 0.5s ease;
+    }
+    .flip.flipped { transform: rotateY(180deg); }
+    .flip .front, .flip .back {
+      backface-visibility: hidden;
+    }
+    .flip .back { transform: rotateY(180deg); }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-sky-100 to-white p-4 md:p-8">
+  <div id="root"></div>
+
+  <!-- React 18 + ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- Babel for inline JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    const STORAGE_KEY = "ws_vocab_v1";
+    const SCORE_KEY = "ws_vocab_scores_v1";
+    const STREAK_KEY = "ws_vocab_streak_v1";
+
+    const RAW = {
+      "Greetings & Basics": [
+        "hello","hi","good morning","welcome","thank you","please","sorry","sure","yes","no","maybe","price","cost","cheap","expensive","discount","promotion","deal","special","booking","reservation","ticket","receipt","pay","cash","credit card","deposit","refund","service","safe","enjoy"
+      ],
+      "Customer & Needs": [
+        "customer","guest","tourist","traveler","group","family","couple","friend","kids","adults","beginner","advanced","experience","guide","trainer","staff","operator","requirement","request","suggestion"
+      ],
+      "Activities & Product": [
+        "parasailing","jetski","wakeboard","banana boat","flyfish boat","watersport","adventure","ride","tour","trip","activity","fun","exciting","relaxing","speed","slow","turn","jump","wave","splash","balance","safety jacket","harness","rope","engine","fuel","control","steering","helmet","life jacket","goggles","waterproof","swimsuit","beach","sea","ocean","sun","sand","island","boat","captain","crew","dock"
+      ],
+      "Safety & Instructions": [
+        "safety","secure","risk","danger","careful","emergency","first aid","rescue","lifeguard","insurance","instruction","rule","regulation","law","protect","permit","license","accident","injury","health","condition","check","equipment","gear","setup","ready","stop","go","signal","whistle"
+      ],
+      "Persuasion & Sales": [
+        "recommend","suggest","advise","choose","select","best","popular","famous","must-try","unforgettable","memory","guarantee","trust","reliable","professional","quality","feedback","review","happy","satisfied","comfortable","relax","private","VIP","exclusive","upgrade","extra","option","package","combo","include"
+      ],
+      "Time & Schedule": [
+        "time","hour","minute","schedule","today","tomorrow","morning","afternoon","evening","daily","weekend","holiday","season","summer","sunny","rainy","weather","wind","wave","delay","cancel"
+      ],
+      "Location & Directions": [
+        "place","location","map","direction","left","right","straight","near","far","beach","shore","pier","harbor","island","hotel","resort","city","countryside","north","south","center"
+      ],
+      "Feelings & Experience": [
+        "amazing","wonderful","fantastic","exciting","thrilling","relaxing","happy","smile","fun","enjoy"
+      ]
+    };
+
+    const VI_HINTS = {
+      hello: "xin chào",
+      welcome: "chào mừng",
+      price: "giá",
+      discount: "giảm giá",
+      booking: "đặt chỗ",
+      reservation: "đặt trước",
+      ticket: "vé",
+      refund: "hoàn tiền",
+      cash: "tiền mặt",
+      "credit card": "thẻ tín dụng",
+      customer: "khách hàng",
+      tourist: "khách du lịch",
+      group: "nhóm",
+      family: "gia đình",
+      kids: "trẻ em",
+      adults: "người lớn",
+      beginner: "người mới",
+      advanced: "nâng cao",
+      guide: "hướng dẫn viên",
+      trainer: "huấn luyện viên",
+      staff: "nhân viên",
+      requirement: "yêu cầu",
+      request: "đề nghị",
+      suggestion: "gợi ý",
+      parasailing: "dù bay",
+      jetski: "mô tô nước",
+      wakeboard: "ván kéo",
+      "banana boat": "thuyền chuối",
+      "flyfish boat": "thuyền flyfish",
+      watersport: "thể thao biển",
+      ride: "chuyến đi",
+      tour: "tour",
+      trip: "chuyến",
+      activity: "hoạt động",
+      speed: "tốc độ",
+      helmet: "mũ bảo hiểm",
+      "life jacket": "áo phao",
+      goggles: "kính bơi",
+      waterproof: "chống nước",
+      swimsuit: "đồ bơi",
+      beach: "bãi biển",
+      sea: "biển",
+      island: "đảo",
+      boat: "thuyền",
+      captain: "thuyền trưởng",
+      crew: "thủy thủ",
+      dock: "bến",
+      safety: "an toàn",
+      emergency: "khẩn cấp",
+      "first aid": "sơ cứu",
+      rescue: "cứu hộ",
+      lifeguard: "cứu hộ bãi biển",
+      insurance: "bảo hiểm",
+      instruction: "hướng dẫn",
+      rule: "quy định",
+      regulation: "quy định",
+      permit: "giấy phép",
+      license: "bằng cấp",
+      accident: "tai nạn",
+      injury: "chấn thương",
+      health: "sức khỏe",
+      equipment: "thiết bị",
+      gear: "dụng cụ",
+      ready: "sẵn sàng",
+      stop: "dừng",
+      go: "đi",
+      signal: "tín hiệu",
+      recommend: "khuyến nghị",
+      choose: "chọn",
+      best: "tốt nhất",
+      popular: "phổ biến",
+      guarantee: "bảo đảm",
+      trust: "tin tưởng",
+      professional: "chuyên nghiệp",
+      quality: "chất lượng",
+      feedback: "phản hồi",
+      review: "đánh giá",
+      happy: "hạnh phúc",
+      satisfied: "hài lòng",
+      private: "riêng tư",
+      VIP: "VIP",
+      upgrade: "nâng cấp",
+      option: "tùy chọn",
+      package: "gói",
+      combo: "combo",
+      include: "bao gồm",
+      time: "thời gian",
+      hour: "giờ",
+      minute: "phút",
+      schedule: "lịch",
+      today: "hôm nay",
+      tomorrow: "ngày mai",
+      morning: "buổi sáng",
+      afternoon: "buổi chiều",
+      evening: "buổi tối",
+      daily: "hàng ngày",
+      weekend: "cuối tuần",
+      holiday: "ngày lễ",
+      weather: "thời tiết",
+      wind: "gió",
+      wave: "sóng",
+      delay: "trì hoãn",
+      cancel: "hủy",
+      location: "địa điểm",
+      map: "bản đồ",
+      left: "trái",
+      right: "phải",
+      near: "gần",
+      far: "xa",
+      shore: "bờ biển",
+      pier: "cầu tàu",
+      harbor: "cảng",
+      hotel: "khách sạn",
+      resort: "khu nghỉ dưỡng",
+      city: "thành phố",
+      north: "bắc",
+      south: "nam",
+      center: "trung tâm",
+      amazing: "tuyệt vời",
+      wonderful: "tuyệt vời",
+      fantastic: "tuyệt hảo",
+      exciting: "kích thích",
+      relaxing: "thư giãn",
+      smile: "mỉm cười",
+      enjoy: "tận hưởng"
+    };
+
+    function buildWordList() {
+      const seen = new Set();
+      const arr = [];
+      Object.entries(RAW).forEach(([cat, words]) => {
+        words.forEach((w) => {
+          const key = w.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            arr.push({ id: key, en: w, vi: VI_HINTS[key] || "", category: cat });
+          }
+        });
+      });
+      const fillers = [
+        "value","benefit","feature","compare","save","slot","capacity","limited","peak","off-peak","queue","line","arrive","meet","briefing","boarding","landing","take-off","rope length","weight limit","age limit","photo","video","GoPro","locker","towel","shower","changing room","snack","water","bottle","shade","umbrella","sunscreen","reef","coral","marine life","tide","current","calm","choppy","surface","depth","distance","lap","circle","loop","turn left","turn right","straight line","figure-eight","signature","waiver","consent","form","policy","terms","conditions","maintenance","checklist","fuel level","battery","starter","kill switch","throttle","brake","accelerate","decelerate","idle","reverse","neutral","brief","demo","trial","lesson","training","orientation","photo package","upgrade package","bundle","upsell","cross-sell","add-on","availability","slot time","time limit","duration","per person","per group","maximum","minimum","queue time","waiting time","start point","end point","meeting point","pick-up","drop-off","shuttle","transfer","onshore","offshore","life ring","buoy","flag","zone","no-wake zone","speed limit","fine","penalty","compensation","coverage","claim","incident","report","radio","channel","call sign","check-in","check-out","late","early","on time","confirm","confirmation","reminder","notify","message","contact","phone","WhatsApp","email","QR code","scan","print","digital","receipt","invoice","balance","settle","split bill","tip","gratuity","net","gross","tax","VAT","inclusive","exclusive","sold out","last seats","best-seller","top-rated","review score","rating","photo spot","sunset","sunrise","visibility","forecast","gust","wave height","UV index","heat index","hydration","dehydration","seasick","motion sickness","pregnant","heart condition","medical","waist","chest","weight","height","fit","tight","loose","adjust","clip","buckle","strap","zip","pocket"
+      ];
+      let i = 0;
+      while (arr.length < 200 && i < fillers.length) {
+        const w = fillers[i++];
+        const key = w.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          arr.push({ id: key, en: w, vi: VI_HINTS[key] || "", category: "Ops & Sales" });
+        }
+      }
+      return arr.slice(0, 200);
+    }
+
+    const shuffle = (a) => {
+      const arr = [...a];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
+
+    const speak = (text) => {
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "en-US";
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(u);
+      } catch {}
+    };
+
+    function useLocalState(key, initial) {
+      const [state, setState] = useState(() => {
+        try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : initial; }
+        catch { return initial; }
+      });
+      useEffect(() => { try { localStorage.setItem(key, JSON.stringify(state)); } catch {} }, [key, state]);
+      return [state, setState];
+    }
+
+    function Header({ total, known, onReset }) {
+      return (
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 p-4 bg-white/70 backdrop-blur rounded-2xl shadow">
+          <div>
+            <h1 className="text-2xl font-bold">Watersports Sales Vocab</h1>
+            <p className="text-sm text-gray-600">200 từ cốt lõi · học bằng flashcards & game</p>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="px-3 py-1 rounded-full bg-gray-100">Tổng: {total}</span>
+            <span className="px-3 py-1 rounded-full bg-green-100">Đã vững: {known}</span>
+            <button onClick={onReset} className="px-3 py-1 rounded-full bg-red-50 hover:bg-red-100 border text-red-600">Reset dữ liệu</button>
+          </div>
+        </div>
+      );
+    }
+
+    function Controls({ categories, activeCat, setActiveCat, mode, setMode, focusWeak, setFocusWeak }) {
+      return (
+        <div className="grid md:grid-cols-4 gap-3 p-4">
+          <div className="col-span-2">
+            <label className="text-xs uppercase text-gray-500">Danh mục</label>
+            <select value={activeCat} onChange={(e)=>setActiveCat(e.target.value)} className="w-full mt-1 rounded-xl border p-2">
+              <option value="All">All</option>
+              {categories.map((c)=> <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs uppercase text-gray-500">Chế độ</label>
+            <select value={mode} onChange={(e)=>setMode(e.target.value)} className="w-full mt-1 rounded-xl border p-2">
+              <option value="flash">Flashcards</option>
+              <option value="quiz">Quiz</option>
+            </select>
+          </div>
+          <div className="flex items-end">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={focusWeak} onChange={(e)=>setFocusWeak(e.target.checked)} />
+              Ưu tiên từ yếu (score thấp)
+            </label>
+          </div>
+        </div>
+      );
+    }
+
+    function Flashcard({ item, onKnow, onDontKnow, onSaveVI }) {
+      const [flipped, setFlipped] = useState(false);
+      const [edit, setEdit] = useState(item.vi || "");
+      useEffect(()=>{ setFlipped(false); setEdit(item.vi||""); }, [item.id]);
+
+      return (
+        <div className="p-4">
+          <div className={"relative h-64 rounded-2xl shadow-xl bg-gradient-to-br from-sky-50 to-indigo-50 border flex items-center justify-center flip " + (flipped ? 'flipped' : '')} onClick={()=>setFlipped(!flipped)}>
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 front">
+              <div className="text-sm text-gray-500 mb-2">{item.category}</div>
+              <div className="text-4xl font-semibold text-gray-900 text-center break-words">{item.en}</div>
+              <div className="mt-4 flex gap-2">
+                <button onClick={(e)=>{e.stopPropagation(); speak(item.en);}} className="px-3 py-1 rounded-full border">🔊 Phát âm</button>
+                <button onClick={(e)=>{e.stopPropagation(); setFlipped(true);}} className="px-3 py-1 rounded-full border">👁️ Xem nghĩa</button>
+              </div>
+            </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 back">
+              <div className="text-sm text-gray-500 mb-2">Nghĩa tiếng Việt (có thể chỉnh)</div>
+              <input value={edit} onChange={(e)=>setEdit(e.target.value)} placeholder="Thêm nghĩa tiếng Việt..." className="w-full max-w-md border rounded-xl p-2 text-center" />
+              <button onClick={(e)=>{e.stopPropagation(); onSaveVI(edit);}} className="mt-3 px-3 py-1 rounded-full bg-emerald-50 border">💾 Lưu nghĩa</button>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-col md:flex-row gap-3 justify-center">
+            <button onClick={onDontKnow} className="px-4 py-2 rounded-2xl border bg-white hover:bg-red-50">❌ Chưa nhớ</button>
+            <button onClick={onKnow} className="px-4 py-2 rounded-2xl border bg-white hover:bg-green-50">✅ Nhớ rồi</button>
+          </div>
+          <p className="text-center mt-2 text-xs text-gray-500">Gợi ý: chạm thẻ để lật. Lưu nghĩa để dùng cho bài Quiz theo nghĩa.</p>
+        </div>
+      );
+    }
+
+    function Quiz({ pool, onAnswer }) {
+      const viReady = pool.filter(x=> (x.vi||"").trim().length>0).length >= 10;
+      const [q, setQ] = useState(() => makeQuestion(pool, viReady));
+      useEffect(()=>{ setQ(makeQuestion(pool, viReady)); }, [pool, viReady]);
+
+      function makeQuestion(list, viMode) {
+        const target = list[Math.floor(Math.random()*list.length)];
+        if (!target) return null;
+        if (viMode) {
+          const wrong = shuffle(list.filter(x=>x.id!==target.id && (x.vi||"").trim()).slice(0, 10)).slice(0,3);
+          const options = shuffle([target.vi, ...wrong.map(x=>x.vi)]);
+          return { type: "meaning", prompt: target.en, correct: target.vi, options, id: target.id };
+        } else {
+          const cats = Array.from(new Set(list.map(x=>x.category)));
+          const wrong = shuffle(cats.filter(c=>c!==target.category)).slice(0,3);
+          const options = shuffle([target.category, ...wrong]);
+          return { type: "category", prompt: target.en, correct: target.category, options, id: target.id };
+        }
+      }
+
+      if (!q) return null;
+
+      return (
+        <div className="p-4">
+          <div className="rounded-2xl border p-6 bg-white shadow">
+            <div className="text-xs uppercase text-gray-500">Quiz · {q.type === 'meaning' ? 'Chọn nghĩa tiếng Việt' : 'Chọn danh mục đúng'}</div>
+            <div className="mt-2 text-3xl font-semibold">{q.prompt}</div>
+            <div className="mt-4 grid md:grid-cols-2 gap-3">
+              {q.options.map((opt, i)=> (
+                <button key={i} onClick={()=>{ onAnswer(q, opt); setQ(makeQuestion(pool, q.type==='meaning')); }} className="px-4 py-3 rounded-xl border hover:shadow">
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Mẹo: Thêm nghĩa tiếng Việt vào flashcard để mở khóa chế độ Quiz theo nghĩa.</p>
+        </div>
+      );
+    }
+
+    function App() {
+      const baseList = useMemo(() => buildWordList(), []);
+      const [saved, setSaved] = useLocalState(STORAGE_KEY, {});
+      const words = useMemo(() => baseList.map(w => ({ ...w, vi: saved[w.id]?.vi ?? w.vi })), [baseList, saved]);
+
+      const [scores, setScores] = useLocalState(SCORE_KEY, {});
+      const scoreOf = (id) => Math.max(-3, Math.min(10, (scores[id] ?? 0)));
+
+      const [streak, setStreak] = useLocalState(STREAK_KEY, { last: 0, count: 0 });
+      useEffect(() => {
+        const today = new Date();
+        const d = Math.floor(today.getTime() / (1000*60*60*24));
+        if (streak.last === 0) setStreak({ last: d, count: 1 });
+        else if (d > streak.last) setStreak({ last: d, count: streak.count + 1 });
+      }, []);
+
+      const categories = useMemo(() => Array.from(new Set(words.map(w => w.category))), [words]);
+      const [activeCat, setActiveCat] = useState("All");
+      const [mode, setMode] = useState("flash");
+      const [focusWeak, setFocusWeak] = useState(true);
+
+      let pool = words.filter(w => activeCat === "All" || w.category === activeCat);
+      if (focusWeak) pool = [...pool].sort((a,b)=> scoreOf(a.id) - scoreOf(b.id)).slice(0, Math.max(20, Math.ceil(pool.length*0.4)));
+
+      const known = words.filter(w => scoreOf(w.id) >= 4).length;
+
+      const [idx, setIdx] = useState(0);
+      useEffect(()=>{ setIdx(0); }, [activeCat, focusWeak]);
+      const current = pool[idx % Math.max(pool.length,1)] || words[0];
+
+      const handleKnow = () => {
+        const id = current.id;
+        setScores(s => ({ ...s, [id]: Math.min(10, (s[id] ?? 0) + 1) }));
+        setIdx((i)=> (i+1) % pool.length);
+      };
+      const handleDontKnow = () => {
+        const id = current.id;
+        setScores(s => ({ ...s, [id]: Math.max(-3, (s[id] ?? 0) - 1) }));
+        setIdx((i)=> (i+1) % pool.length);
+      };
+      const handleSaveVI = (text) => {
+        const id = current.id;
+        setSaved((d) => ({ ...d, [id]: { vi: text } }));
+      };
+
+      const onAnswer = (q, answer) => {
+        const correct = answer === q.correct;
+        setScores(s => ({ ...s, [q.id]: Math.max(-3, Math.min(10, (s[q.id] ?? 0) + (correct ? 1 : -1))) }));
+      };
+
+      const resetAll = () => {
+        if (confirm("Reset toàn bộ tiến trình học?")) {
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(SCORE_KEY);
+          localStorage.removeItem(STREAK_KEY);
+          window.location.reload();
+        }
+      };
+
+      return (
+        <div className="max-w-4xl mx-auto space-y-4">
+          <Header total={words.length} known={known} onReset={resetAll} />
+
+          <div className="flex items-center justify-between px-4">
+            <div className="text-sm">🔥 Streak: <span className="font-semibold">{streak.count} ngày</span></div>
+            <div className="text-sm">🎯 Tập trung: {focusWeak ? "Từ yếu" : "Tất cả"}</div>
+          </div>
+
+          <Controls
+            categories={categories}
+            activeCat={activeCat}
+            setActiveCat={setActiveCat}
+            mode={mode}
+            setMode={setMode}
+            focusWeak={focusWeak}
+            setFocusWeak={setFocusWeak}
+          />
+
+          {mode === "flash" ? (
+            <Flashcard item={current} onKnow={handleKnow} onDontKnow={handleDontKnow} onSaveVI={handleSaveVI} />
+          ) : (
+            <Quiz pool={pool} onAnswer={onAnswer} />
+          )}
+
+          <div className="p-4">
+            <div className="rounded-2xl bg-white border p-4 text-sm text-gray-600">
+              <b>Mẹo sử dụng cho đội Sale</b>
+              <ul className="list-disc ml-5 mt-2 space-y-1">
+                <li>Ưu tiên thêm nghĩa Việt cho các thuật ngữ chuyên môn (ví dụ: harness, throttle, kill switch...).</li>
+                <li>Nhấn 🔊 để luyện phát âm từng từ trước khi lên ca làm.</li>
+                <li>Bật "Ưu tiên từ yếu" để ôn 20–40% từ yếu nhất của bạn mỗi ngày.</li>
+                <li>Chuyển sang chế độ Quiz để kiểm tra nhanh 3–5 phút giữa ca.</li>
+              </ul>
+            </div>
+          </div>
+
+          <footer className="text-center text-xs text-gray-400 pb-6">v1.0 · Single-file Prototype for RCC Watersports Sales Team</footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
